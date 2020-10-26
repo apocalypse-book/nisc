@@ -249,6 +249,17 @@ int nun_lex(struct NunTokens *dest, const char *src, size_t len) {
     return 0;
 }
 
+void nun_del_tokens(struct NunTokens *tokens) {
+    for (size_t i = 0; i < tokens->len; i++) {
+        NunToken *token = tokens->list + i;
+        if (token->kind == NUN_TOKEN_IDENT
+            && token->subkind == NUN_TOKEN_NONE) {
+            free(token->vatom);
+        }
+    }
+    free(tokens->list);
+}
+
 void nun_new_gc(NunGc *dest, size_t capacity) {
     dest->buffer = malloc(capacity);
     dest->len = sizeof(struct NunAllocFrame);
@@ -1213,7 +1224,9 @@ int main(int argc, const char **argv) {
         char *src = malloc(statbuf.st_size);
         len = fread(src, 1, statbuf.st_size, fsrc);
         if (len != (size_t) statbuf.st_size) {
-            fprintf(stderr, "nunsc:%s:%d: error: %s\n", __FILE__, __LINE__, strerror(errno));
+            int err = errno;
+            fclose(fsrc);
+            fprintf(stderr, "nunsc:%s:%d: error: %s\n", __FILE__, __LINE__, strerror(err));
             exit(errno);
         }
         fclose(fsrc);
@@ -1229,11 +1242,15 @@ int main(int argc, const char **argv) {
     NunGc gc;
     nun_new_gc(&gc, 1024 * 1024);
 
-    NunValue *program;
+    NunValue *program = NULL;
     size_t proglen;
     if ((status = nun_parse(&program, &proglen, &gc, &tokens))) {
+        free(program);
+        nun_del_tokens(&tokens);
+        free((void *) source);
         exit(status);
     }
+    nun_del_tokens(&tokens);
 
     for (size_t i = 0; i < proglen; i++) {
         const int cap = 1024;
@@ -1243,6 +1260,9 @@ int main(int argc, const char **argv) {
     }
 
     nun_del_gc(&gc);
+
+    free(program);
+    free((void *) source);
     
     return 0;
 }

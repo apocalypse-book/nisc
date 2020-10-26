@@ -196,6 +196,7 @@ struct NunGc {
 extern const char *TOKEN_STRINGS[];
 
 int nun_lex(struct NunTokens *dest, const char *src, size_t len);
+void nun_del_tokens(struct NunTokens *tokens);
 
 static inline size_t nun_align_down(size_t arg, size_t align) {
     return arg & ~(align - 1);
