@@ -1,39 +1,39 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "include/nunsc.h"
+#include "include/nisc.h"
 
 const char *TOKEN_STRINGS[] = {
-    [NUN_TOKEN_NONE] = "<none>",
-    [NUN_TOKEN_IDENT] = "<identifer>",
-    [NUN_TOKEN_CHAR] = "<character>",
-    [NUN_TOKEN_INT] = "<integer>",
-    [NUN_TOKEN_FLOAT] = "<real>",
-    [NUN_TOKEN_DOT] = "`.`",
-    [NUN_TOKEN_SINGLE_QUOTE] = "`'`",
-    [NUN_TOKEN_U8PARENL] = "`u8(`",
-    [NUN_TOKEN_PARENL] = "`(`",
-    [NUN_TOKEN_PARENR] = "`)`",
-    [NUN_TOKEN_BACKTICK] = "`\\``",
-    [NUN_TOKEN_COMMA] = "`,`",
-    [NUN_TOKEN_COMMA_AT] = "`,@`",
-    [NUN_TOKEN_DOUBLE_QUOTE] = "`\"`",
-    [NUN_TOKEN_BACKSLASH] = "`\\\\`",
-    [NUN_TOKEN_SQUAREL] = "`[`",
-    [NUN_TOKEN_SQUARER] = "`]`",
-    [NUN_TOKEN_CURLYL] = "`{`",
-    [NUN_TOKEN_CURLYR] = "`}`",
-    [NUN_TOKEN_HASH] = "`#`",
-    [NUN_TOKEN_INLINE] = "<identifier>",
-    [NUN_TOKEN_LABEL] = "<integer>`=`",
-    [NUN_TOKEN_REFERENCE] = "<integer>`#`",
+    [NIS_TOKEN_NONE] = "<none>",
+    [NIS_TOKEN_IDENT] = "<identifer>",
+    [NIS_TOKEN_CHAR] = "<character>",
+    [NIS_TOKEN_INT] = "<integer>",
+    [NIS_TOKEN_FLOAT] = "<real>",
+    [NIS_TOKEN_DOT] = "`.`",
+    [NIS_TOKEN_SINGLE_QUOTE] = "`'`",
+    [NIS_TOKEN_U8PARENL] = "`u8(`",
+    [NIS_TOKEN_PARENL] = "`(`",
+    [NIS_TOKEN_PARENR] = "`)`",
+    [NIS_TOKEN_BACKTICK] = "`\\``",
+    [NIS_TOKEN_COMMA] = "`,`",
+    [NIS_TOKEN_COMMA_AT] = "`,@`",
+    [NIS_TOKEN_DOUBLE_QUOTE] = "`\"`",
+    [NIS_TOKEN_BACKSLASH] = "`\\\\`",
+    [NIS_TOKEN_SQUAREL] = "`[`",
+    [NIS_TOKEN_SQUARER] = "`]`",
+    [NIS_TOKEN_CURLYL] = "`{`",
+    [NIS_TOKEN_CURLYR] = "`}`",
+    [NIS_TOKEN_HASH] = "`#`",
+    [NIS_TOKEN_INLINE] = "<identifier>",
+    [NIS_TOKEN_LABEL] = "<integer>`=`",
+    [NIS_TOKEN_REFERENCE] = "<integer>`#`",
     NULL,
 };
 
 enum {
-    NUN_LEX_NORMAL,
-    NUN_LEX_HASH,
-    NUN_LEX_STRING,
+    NIS_LEX_NORMAL,
+    NIS_LEX_HASH,
+    NIS_LEX_STRING,
 };
 
 static bool is_ident_begin(int ch) {
@@ -86,44 +86,44 @@ static bool is_ident_cont(int ch) {
     }
 }
 
-int nun_lex(struct NunTokens *dest, const char *src, size_t len) {
+int nis_lex(struct NisTokens *dest, const char *src, size_t len) {
     size_t cap = 16;
-    dest->list = malloc(cap * sizeof(NunToken));
+    dest->list = malloc(cap * sizeof(NisToken));
     dest->len = 0;
 
-    int state = NUN_LEX_NORMAL;
+    int state = NIS_LEX_NORMAL;
 
     const char *ptr = src;
     for (size_t offset = 0; offset < len; ) {
         if (dest->len == cap) {
             cap *= 2;
-            dest->list = realloc(dest->list, cap * sizeof(NunToken));
+            dest->list = realloc(dest->list, cap * sizeof(NisToken));
         }
         switch (state) {
-        case NUN_LEX_NORMAL: {
+        case NIS_LEX_NORMAL: {
             ptr = src + offset;
             char ch = src[offset++];
             switch (ch) {
             case '(': {
-                dest->list[dest->len].kind = NUN_TOKEN_PARENL;
+                dest->list[dest->len].kind = NIS_TOKEN_PARENL;
                 dest->list[dest->len].span.ptr = ptr;
                 dest->list[dest->len].span.len = 1;
                 dest->len++;
             } break;
             case ')': {
-                dest->list[dest->len].kind = NUN_TOKEN_PARENR;
+                dest->list[dest->len].kind = NIS_TOKEN_PARENR;
                 dest->list[dest->len].span.ptr = ptr;
                 dest->list[dest->len].span.len = 1;
                 dest->len++;
             } break;
             case '\'': {
-                dest->list[dest->len].kind = NUN_TOKEN_SINGLE_QUOTE;
+                dest->list[dest->len].kind = NIS_TOKEN_SINGLE_QUOTE;
                 dest->list[dest->len].span.ptr = ptr;
                 dest->list[dest->len].span.len = 1;
                 dest->len++;
             } break;
             case '`': {
-                dest->list[dest->len].kind = NUN_TOKEN_BACKTICK;
+                dest->list[dest->len].kind = NIS_TOKEN_BACKTICK;
                 dest->list[dest->len].span.ptr = ptr;
                 dest->list[dest->len].span.len = 1;
                 dest->len++;
@@ -131,36 +131,36 @@ int nun_lex(struct NunTokens *dest, const char *src, size_t len) {
             case ',': {
                 if (src[offset] == '@') {
                     offset++;
-                    dest->list[dest->len].kind = NUN_TOKEN_COMMA_AT;
+                    dest->list[dest->len].kind = NIS_TOKEN_COMMA_AT;
                     dest->list[dest->len].span.ptr = ptr;
                     dest->list[dest->len].span.len = 2;
                 } else {
-                    dest->list[dest->len].kind = NUN_TOKEN_COMMA;
+                    dest->list[dest->len].kind = NIS_TOKEN_COMMA;
                     dest->list[dest->len].span.ptr = ptr;
                     dest->list[dest->len].span.len = 1;
                 }
                 dest->len++;
             } break;
             case '[': {
-                dest->list[dest->len].kind = NUN_TOKEN_SQUAREL;
+                dest->list[dest->len].kind = NIS_TOKEN_SQUAREL;
                 dest->list[dest->len].span.ptr = ptr;
                 dest->list[dest->len].span.len = 1;
                 dest->len++;
             } break;
             case ']': {
-                dest->list[dest->len].kind = NUN_TOKEN_SQUARER;
+                dest->list[dest->len].kind = NIS_TOKEN_SQUARER;
                 dest->list[dest->len].span.ptr = ptr;
                 dest->list[dest->len].span.len = 1;
                 dest->len++;
             } break;
             case '{': {
-                dest->list[dest->len].kind = NUN_TOKEN_CURLYL;
+                dest->list[dest->len].kind = NIS_TOKEN_CURLYL;
                 dest->list[dest->len].span.ptr = ptr;
                 dest->list[dest->len].span.len = 1;
                 dest->len++;
             } break;
             case '}': {
-                dest->list[dest->len].kind = NUN_TOKEN_CURLYR;
+                dest->list[dest->len].kind = NIS_TOKEN_CURLYR;
                 dest->list[dest->len].span.ptr = ptr;
                 dest->list[dest->len].span.len = 1;
                 dest->len++;
@@ -185,7 +185,7 @@ int nun_lex(struct NunTokens *dest, const char *src, size_t len) {
                     num += ch;
                     ++len;
                 }
-                dest->list[dest->len].kind = NUN_TOKEN_INT;
+                dest->list[dest->len].kind = NIS_TOKEN_INT;
                 dest->list[dest->len].vint = num;
                 dest->list[dest->len].span.ptr = ptr;
                 dest->list[dest->len].span.len = len;
@@ -214,16 +214,16 @@ int nun_lex(struct NunTokens *dest, const char *src, size_t len) {
                     }
                     
                     if (vatom) {
-                        dest->list[dest->len].kind = NUN_TOKEN_IDENT;
-                        dest->list[dest->len].subkind = NUN_TOKEN_NONE;
+                        dest->list[dest->len].kind = NIS_TOKEN_IDENT;
+                        dest->list[dest->len].subkind = NIS_TOKEN_NONE;
                         dest->list[dest->len].vatom = vatom;
                     } else {
                         vinline[len] = '\0';
                         if (strcmp(vinline, ".") == 0) {
-                            dest->list[dest->len].kind = NUN_TOKEN_DOT;
+                            dest->list[dest->len].kind = NIS_TOKEN_DOT;
                         } else {
-                            dest->list[dest->len].kind = NUN_TOKEN_IDENT;
-                            dest->list[dest->len].subkind = NUN_TOKEN_INLINE;
+                            dest->list[dest->len].kind = NIS_TOKEN_IDENT;
+                            dest->list[dest->len].subkind = NIS_TOKEN_INLINE;
                             strncpy(dest->list[dest->len].vinline, vinline, 8);
                         }
                     }
@@ -231,169 +231,169 @@ int nun_lex(struct NunTokens *dest, const char *src, size_t len) {
                     dest->list[dest->len].span.len = len;
                     dest->len++;
                 } else {
-                    fprintf(stderr, "nunsc:%s:%d: error: `%c` is not a valid character\n", __FILE__, __LINE__, ch);
+                    fprintf(stderr, "nisc:%s:%d: error: `%c` is not a valid character\n", __FILE__, __LINE__, ch);
                     return 1;
                 }
             } break;
             }
         } break;
-        case NUN_LEX_HASH: {
+        case NIS_LEX_HASH: {
         } break;
-        case NUN_LEX_STRING: {
+        case NIS_LEX_STRING: {
         } break;
         }
     }
     return 0;
 }
 
-void nun_del_tokens(struct NunTokens *tokens) {
+void nis_del_tokens(struct NisTokens *tokens) {
     for (size_t i = 0; i < tokens->len; i++) {
-        NunToken *token = tokens->list + i;
-        if (token->kind == NUN_TOKEN_IDENT
-            && token->subkind == NUN_TOKEN_NONE) {
+        NisToken *token = tokens->list + i;
+        if (token->kind == NIS_TOKEN_IDENT
+            && token->subkind == NIS_TOKEN_NONE) {
             free(token->vatom);
         }
     }
     free(tokens->list);
 }
 
-static int nun_parse_one(NunValue *dest, NunGc *gc, struct NunTokens *tokens, size_t *idx) {
-    NunToken *token = &tokens->list[*idx];
+static int nis_parse_one(NisValue *dest, NisGc *gc, struct NisTokens *tokens, size_t *idx) {
+    NisToken *token = &tokens->list[*idx];
     ++*idx;
     switch (token->kind) {
-    case NUN_TOKEN_IDENT: {
+    case NIS_TOKEN_IDENT: {
         const char *atom;
-        if (token->subkind == NUN_TOKEN_INLINE) {
+        if (token->subkind == NIS_TOKEN_INLINE) {
             atom = token->vinline;
         } else {
             atom = token->vatom;
         }
         if (strcmp(atom, "lambda") == 0) {
-            nun_special(dest, gc, NUN_VALUE_LAMBDA);
+            nis_special(dest, gc, NIS_VALUE_LAMBDA);
         } else if (strcmp(atom, "if") == 0) {
-            nun_special(dest, gc, NUN_VALUE_IF);
+            nis_special(dest, gc, NIS_VALUE_IF);
         } else if (strcmp(atom, "set!") == 0) {
-            nun_special(dest, gc, NUN_VALUE_SET);
+            nis_special(dest, gc, NIS_VALUE_SET);
         } else if (strcmp(atom, "include") == 0) {
-            nun_special(dest, gc, NUN_VALUE_INCLUDE);
+            nis_special(dest, gc, NIS_VALUE_INCLUDE);
         } else if (strcmp(atom, "include-ci") == 0) {
-            nun_special(dest, gc, NUN_VALUE_INCLUDE_CI);
+            nis_special(dest, gc, NIS_VALUE_INCLUDE_CI);
         } else if (strcmp(atom, "cond") == 0) {
-            nun_special(dest, gc, NUN_VALUE_COND);
+            nis_special(dest, gc, NIS_VALUE_COND);
         } else if (strcmp(atom, "case") == 0) {
-            nun_special(dest, gc, NUN_VALUE_CASE);
+            nis_special(dest, gc, NIS_VALUE_CASE);
         } else if (strcmp(atom, "else") == 0) {
-            nun_special(dest, gc, NUN_VALUE_ELSE);
+            nis_special(dest, gc, NIS_VALUE_ELSE);
         } else if (strcmp(atom, "and") == 0) {
-            nun_special(dest, gc, NUN_VALUE_AND);
+            nis_special(dest, gc, NIS_VALUE_AND);
         } else if (strcmp(atom, "or") == 0) {
-            nun_special(dest, gc, NUN_VALUE_OR);
+            nis_special(dest, gc, NIS_VALUE_OR);
         } else if (strcmp(atom, "unless") == 0) {
-            nun_special(dest, gc, NUN_VALUE_UNLESS);
+            nis_special(dest, gc, NIS_VALUE_UNLESS);
         } else if (strcmp(atom, "cond-expand") == 0) {
-            nun_special(dest, gc, NUN_VALUE_COND_EXPAND);
+            nis_special(dest, gc, NIS_VALUE_COND_EXPAND);
         } else if (strcmp(atom, "let") == 0) {
-            nun_special(dest, gc, NUN_VALUE_LET);
+            nis_special(dest, gc, NIS_VALUE_LET);
         } else if (strcmp(atom, "let*") == 0) {
-            nun_special(dest, gc, NUN_VALUE_LET_STAR);
+            nis_special(dest, gc, NIS_VALUE_LET_STAR);
         } else if (strcmp(atom, "letrec") == 0) {
-            nun_special(dest, gc, NUN_VALUE_LETREC);
+            nis_special(dest, gc, NIS_VALUE_LETREC);
         } else if (strcmp(atom, "letrec*") == 0) {
-            nun_special(dest, gc, NUN_VALUE_LETREC_STAR);
+            nis_special(dest, gc, NIS_VALUE_LETREC_STAR);
         } else if (strcmp(atom, "let-values") == 0) {
-            nun_special(dest, gc, NUN_VALUE_LET_VALUES);
+            nis_special(dest, gc, NIS_VALUE_LET_VALUES);
         } else if (strcmp(atom, "let*-values") == 0) {
-            nun_special(dest, gc, NUN_VALUE_LET_VALUES_STAR);
+            nis_special(dest, gc, NIS_VALUE_LET_VALUES_STAR);
         } else if (strcmp(atom, "begin") == 0) {
-            nun_special(dest, gc, NUN_VALUE_BEGIN);
+            nis_special(dest, gc, NIS_VALUE_BEGIN);
         } else if (strcmp(atom, "do") == 0) {
-            nun_special(dest, gc, NUN_VALUE_DO);
+            nis_special(dest, gc, NIS_VALUE_DO);
         } else if (strcmp(atom, "delay") == 0) {
-            nun_special(dest, gc, NUN_VALUE_DELAY);
+            nis_special(dest, gc, NIS_VALUE_DELAY);
         } else if (strcmp(atom, "delay-force") == 0) {
-            nun_special(dest, gc, NUN_VALUE_DELAY_FORCE);
+            nis_special(dest, gc, NIS_VALUE_DELAY_FORCE);
         } else if (strcmp(atom, "force") == 0) {
-            nun_special(dest, gc, NUN_VALUE_FORCE);
+            nis_special(dest, gc, NIS_VALUE_FORCE);
         } else if (strcmp(atom, "make-promise") == 0) {
-            nun_special(dest, gc, NUN_VALUE_MAKE_PROMISE);
+            nis_special(dest, gc, NIS_VALUE_MAKE_PROMISE);
         } else if (strcmp(atom, "make-parameter") == 0) {
-            nun_special(dest, gc, NUN_VALUE_MAKE_PARAMETER);
+            nis_special(dest, gc, NIS_VALUE_MAKE_PARAMETER);
         } else if (strcmp(atom, "parameterize") == 0) {
-            nun_special(dest, gc, NUN_VALUE_PARAMETERIZE);
+            nis_special(dest, gc, NIS_VALUE_PARAMETERIZE);
         } else if (strcmp(atom, "guard") == 0) {
-            nun_special(dest, gc, NUN_VALUE_GUARD);
+            nis_special(dest, gc, NIS_VALUE_GUARD);
         } else if (strcmp(atom, "quasiquote") == 0) {
-            nun_special(dest, gc, NUN_VALUE_QUASIQUOTE);
+            nis_special(dest, gc, NIS_VALUE_QUASIQUOTE);
         } else if (strcmp(atom, "unquote") == 0) {
-            nun_special(dest, gc, NUN_VALUE_UNQUOTE);
+            nis_special(dest, gc, NIS_VALUE_UNQUOTE);
         } else if (strcmp(atom, "unquote-splicing") == 0) {
-            nun_special(dest, gc, NUN_VALUE_UNQUOTE_SPLICING);
+            nis_special(dest, gc, NIS_VALUE_UNQUOTE_SPLICING);
         } else if (strcmp(atom, "case-lambda") == 0) {
-            nun_special(dest, gc, NUN_VALUE_CASE_LAMBDA);
+            nis_special(dest, gc, NIS_VALUE_CASE_LAMBDA);
         } else if (strcmp(atom, "let-syntax") == 0) {
-            nun_special(dest, gc, NUN_VALUE_LET_SYNTAX);
+            nis_special(dest, gc, NIS_VALUE_LET_SYNTAX);
         } else if (strcmp(atom, "letrec-syntax") == 0) {
-            nun_special(dest, gc, NUN_VALUE_LETREC_SYNTAX);
+            nis_special(dest, gc, NIS_VALUE_LETREC_SYNTAX);
         } else if (strcmp(atom, "syntax-rules") == 0) {
-            nun_special(dest, gc, NUN_VALUE_SYNTAX_RULES);
+            nis_special(dest, gc, NIS_VALUE_SYNTAX_RULES);
         } else if (strcmp(atom, "syntax-error") == 0) {
-            nun_special(dest, gc, NUN_VALUE_SYNTAX_ERROR);
+            nis_special(dest, gc, NIS_VALUE_SYNTAX_ERROR);
         } else {
-            nun_atom(dest, gc, atom);
+            nis_atom(dest, gc, atom);
             dest->vtree->span = token->span;
         }
         return 0;
     }
-    case NUN_TOKEN_CHAR: {
-        nun_int(dest, gc, token->vchar);
+    case NIS_TOKEN_CHAR: {
+        nis_int(dest, gc, token->vchar);
         return 0;
     }
-    case NUN_TOKEN_INT: {
-        nun_int(dest, gc, token->vint);
+    case NIS_TOKEN_INT: {
+        nis_int(dest, gc, token->vint);
         return 0;
     }
-    case NUN_TOKEN_FLOAT: {
-        nun_float(dest, gc, token->vfloat);
+    case NIS_TOKEN_FLOAT: {
+        nis_float(dest, gc, token->vfloat);
         return 0;
     }
-    case NUN_TOKEN_PARENL: {
+    case NIS_TOKEN_PARENL: {
         size_t len = token->span.len;
 
-        NunToken *token2 = &tokens->list[*idx];
+        NisToken *token2 = &tokens->list[*idx];
         
-        if (token2->kind == NUN_TOKEN_PARENR) {
+        if (token2->kind == NIS_TOKEN_PARENR) {
             ++*idx;
-            nun_nil(dest, gc);
+            nis_nil(dest, gc);
             return 0;
         }
 
-        NunValue fst;
-        nun_parse_one(&fst, gc, tokens, idx);
+        NisValue fst;
+        nis_parse_one(&fst, gc, tokens, idx);
         
         token2 = &tokens->list[*idx];
 
-        if (token2->kind == NUN_TOKEN_PARENR) {
+        if (token2->kind == NIS_TOKEN_PARENR) {
             ++*idx;
-            NunValue nil;
-            nun_nil(&nil, gc);
-            nun_pair(dest, gc, &fst, &nil);
+            NisValue nil;
+            nis_nil(&nil, gc);
+            nis_pair(dest, gc, &fst, &nil);
             
             len += (token2->span.ptr - (token->span.ptr + len)) + token2->span.len;
             dest->vtree->span.ptr = token->span.ptr;
             dest->vtree->span.len = len;
 
             return 0;
-        } else if (token2->kind == NUN_TOKEN_DOT) {
+        } else if (token2->kind == NIS_TOKEN_DOT) {
             ++*idx;
-            NunValue snd;
-            nun_parse_one(&snd, gc, tokens, idx);
-            nun_pair(dest, gc, &fst, &snd);
+            NisValue snd;
+            nis_parse_one(&snd, gc, tokens, idx);
+            nis_pair(dest, gc, &fst, &snd);
             
             token2 = &tokens->list[*idx];
 
-            if (token2->kind != NUN_TOKEN_PARENR) {
+            if (token2->kind != NIS_TOKEN_PARENR) {
                 fprintf(stderr,
-                        "nunsc:%s:%d: error: unexpected token: %s\n",
+                        "nisc:%s:%d: error: unexpected token: %s\n",
                         __FILE__,
                         __LINE__,
                         TOKEN_STRINGS[token2->kind]);
@@ -407,26 +407,26 @@ static int nun_parse_one(NunValue *dest, NunGc *gc, struct NunTokens *tokens, si
             return 0;
         }
 
-        NunValue nil;
-        nun_nil(&nil, gc);
-        nun_pair(dest, gc, &fst, &nil);
+        NisValue nil;
+        nis_nil(&nil, gc);
+        nis_pair(dest, gc, &fst, &nil);
 
-        NunStree *list = dest->vtree;
+        NisStree *list = dest->vtree;
         
         token2 = &tokens->list[*idx];
 
-        while (token2->kind != NUN_TOKEN_PARENR) {
-            if (token2->kind == NUN_TOKEN_DOT) {
+        while (token2->kind != NIS_TOKEN_PARENR) {
+            if (token2->kind == NIS_TOKEN_DOT) {
                 ++*idx;
-                NunValue last;
-                nun_parse_one(&last, gc, tokens, idx);
-                list->vpair.cdr = nun_value_to_stree(gc, &last);
+                NisValue last;
+                nis_parse_one(&last, gc, tokens, idx);
+                list->vpair.cdr = nis_value_to_stree(gc, &last);
                 break;
             } else {
-                NunValue next;
-                nun_parse_one(&next, gc, tokens, idx);
-                NunValue newlist;
-                nun_pair(&newlist, gc, &next, &nil);
+                NisValue next;
+                nis_parse_one(&next, gc, tokens, idx);
+                NisValue newlist;
+                nis_pair(&newlist, gc, &next, &nil);
                 list->vpair.cdr = newlist.vtree;
                 list = list->vpair.cdr;
             }
@@ -435,9 +435,9 @@ static int nun_parse_one(NunValue *dest, NunGc *gc, struct NunTokens *tokens, si
         
         token2 = &tokens->list[*idx];
 
-        if (token2->kind != NUN_TOKEN_PARENR) {
+        if (token2->kind != NIS_TOKEN_PARENR) {
             fprintf(stderr,
-                    "nunsc:%s:%d: error: unexpected token: %s\n",
+                    "nisc:%s:%d: error: unexpected token: %s\n",
                     __FILE__,
                     __LINE__,
                     TOKEN_STRINGS[token2->kind]);
@@ -452,73 +452,73 @@ static int nun_parse_one(NunValue *dest, NunGc *gc, struct NunTokens *tokens, si
 
         return 0;
     }
-    case NUN_TOKEN_SINGLE_QUOTE: {
-        NunValue expr;
-        nun_parse_one(&expr, gc, tokens, idx);
+    case NIS_TOKEN_SINGLE_QUOTE: {
+        NisValue expr;
+        nis_parse_one(&expr, gc, tokens, idx);
 
-        NunValue nil;
-        nun_nil(&nil, gc);
+        NisValue nil;
+        nis_nil(&nil, gc);
         
-        NunValue list;
-        nun_pair(&list, gc, &expr, &nil);
+        NisValue list;
+        nis_pair(&list, gc, &expr, &nil);
 
-        NunValue quote;
-        nun_special(&quote, gc, NUN_VALUE_QUOTE);
+        NisValue quote;
+        nis_special(&quote, gc, NIS_VALUE_QUOTE);
 
-        nun_pair(dest, gc, &quote, &list);
+        nis_pair(dest, gc, &quote, &list);
         return 0;
     }
-    case NUN_TOKEN_BACKTICK: {
-        NunValue expr;
-        nun_parse_one(&expr, gc, tokens, idx);
+    case NIS_TOKEN_BACKTICK: {
+        NisValue expr;
+        nis_parse_one(&expr, gc, tokens, idx);
 
-        NunValue nil;
-        nun_nil(&nil, gc);
+        NisValue nil;
+        nis_nil(&nil, gc);
         
-        NunValue list;
-        nun_pair(&list, gc, &expr, &nil);
+        NisValue list;
+        nis_pair(&list, gc, &expr, &nil);
 
-        NunValue quote;
-        nun_special(&quote, gc, NUN_VALUE_QUASIQUOTE);
+        NisValue quote;
+        nis_special(&quote, gc, NIS_VALUE_QUASIQUOTE);
 
-        nun_pair(dest, gc, &quote, &list);
+        nis_pair(dest, gc, &quote, &list);
         return 0;
     }
-    case NUN_TOKEN_COMMA: {
-        NunValue expr;
-        nun_parse_one(&expr, gc, tokens, idx);
+    case NIS_TOKEN_COMMA: {
+        NisValue expr;
+        nis_parse_one(&expr, gc, tokens, idx);
 
-        NunValue nil;
-        nun_nil(&nil, gc);
+        NisValue nil;
+        nis_nil(&nil, gc);
         
-        NunValue list;
-        nun_pair(&list, gc, &expr, &nil);
+        NisValue list;
+        nis_pair(&list, gc, &expr, &nil);
 
-        NunValue unquote;
-        nun_special(&unquote, gc, NUN_VALUE_UNQUOTE);
+        NisValue unquote;
+        nis_special(&unquote, gc, NIS_VALUE_UNQUOTE);
 
-        nun_pair(dest, gc, &unquote, &list);
+        nis_pair(dest, gc, &unquote, &list);
         return 0;
     }
-    case NUN_TOKEN_COMMA_AT: {
-        NunValue expr;
-        nun_parse_one(&expr, gc, tokens, idx);
+    case NIS_TOKEN_COMMA_AT: {
+        NisValue expr;
+        nis_parse_one(&expr, gc, tokens, idx);
 
-        NunValue nil;
-        nun_nil(&nil, gc);
+        NisValue nil;
+        nis_nil(&nil, gc);
         
-        NunValue list;
-        nun_pair(&list, gc, &expr, &nil);
+        NisValue list;
+        nis_pair(&list, gc, &expr, &nil);
 
-        NunValue unquote;
-        nun_special(&unquote, gc, NUN_VALUE_UNQUOTE_SPLICING);
+        NisValue unquote;
+        nis_special(&unquote, gc, NIS_VALUE_UNQUOTE_SPLICING);
 
-        nun_pair(dest, gc, &unquote, &list);
+        nis_pair(dest, gc, &unquote, &list);
         return 0;
     }
     default:
         fprintf(stderr,
-                "nunsc:%s:%d: error: unexpected token: %s\n",
+                "nisc:%s:%d: error: unexpected token: %s\n",
                 __FILE__,
                 __LINE__,
                 TOKEN_STRINGS[token->kind]);
@@ -526,19 +526,19 @@ static int nun_parse_one(NunValue *dest, NunGc *gc, struct NunTokens *tokens, si
     }
 }
 
-int nun_parse(NunValue **dest, size_t *len, NunGc *gc, struct NunTokens *tokens) {
+int nis_parse(NisValue **dest, size_t *len, NisGc *gc, struct NisTokens *tokens) {
     int status = 0;
     size_t offset = 0;
     size_t capacity = 64;
-    *dest = malloc(capacity * sizeof(NunValue));
+    *dest = malloc(capacity * sizeof(NisValue));
     *len = 0;
     size_t i = 0;
     while (i < tokens->len) {
         if (offset == capacity) {
             capacity *= 2;
-            *dest = realloc(*dest, capacity * sizeof(NunValue));
+            *dest = realloc(*dest, capacity * sizeof(NisValue));
         }
-        int s = nun_parse_one(*dest + offset++, gc, tokens, &i);
+        int s = nis_parse_one(*dest + offset++, gc, tokens, &i);
         if (!s) {
             ++*len;
         }

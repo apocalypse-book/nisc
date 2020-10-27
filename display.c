@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <tgmath.h>
-#include "include/nunsc.h"
+#include "include/nisc.h"
 
 struct DisplayParams {
     size_t count;
@@ -10,9 +10,9 @@ struct DisplayParams {
     const char *newline_char;
 };
 
-static size_t nun_display_inner_tree(char *dest, size_t len, struct DisplayParams *params, NunStree *value) {
+static size_t nis_display_inner_tree(char *dest, size_t len, struct DisplayParams *params, NisStree *value) {
     switch (value->kind) {
-    case NUN_STREE_FALSE: {
+    case NIS_STREE_FALSE: {
         if (params->count + 2 <= len) {
             params->count += 2;
             dest[0] = '#';
@@ -20,7 +20,7 @@ static size_t nun_display_inner_tree(char *dest, size_t len, struct DisplayParam
             return 2;
         }
     } break;
-    case NUN_STREE_TRUE: {
+    case NIS_STREE_TRUE: {
         if (params->count + 2 <= len) {
             params->count += 2;
             dest[0] = '#';
@@ -28,7 +28,7 @@ static size_t nun_display_inner_tree(char *dest, size_t len, struct DisplayParam
             return 2;
         }
     } break;
-    case NUN_STREE_INT: {
+    case NIS_STREE_INT: {
         int digits;
         if (value->vint) {
             digits = floor(log10(labs(value->vint)) + 1.0);
@@ -51,10 +51,10 @@ static size_t nun_display_inner_tree(char *dest, size_t len, struct DisplayParam
             return digits;
         }
     } break;
-    case NUN_STREE_FLOAT: {
+    case NIS_STREE_FLOAT: {
         // TODO
     } break;
-    case NUN_STREE_NIL: {
+    case NIS_STREE_NIL: {
         if (params->count + 2 <= len) {
             dest[0] = '(';
             dest[1] = ')';
@@ -62,8 +62,8 @@ static size_t nun_display_inner_tree(char *dest, size_t len, struct DisplayParam
             return 2;
         }
     } break;
-    case NUN_STREE_PAIR: {
-        if (nun_list_eh(value)) {
+    case NIS_STREE_PAIR: {
+        if (nis_list_eh(value)) {
             size_t count = 0;
             if (params->count + 1 <= len) {
                 dest[0] = '(';
@@ -71,10 +71,10 @@ static size_t nun_display_inner_tree(char *dest, size_t len, struct DisplayParam
                 ++params->count;
                 ++count;
             }
-            for (NunStree *list = value, *car = list->vpair.car;
-                 list->kind != NUN_STREE_NIL;
+            for (NisStree *list = value, *car = list->vpair.car;
+                 list->kind != NIS_STREE_NIL;
                  list = list->vpair.cdr, car = list->vpair.car) {
-                size_t c = nun_display_inner_tree(dest, len, params, car);
+                size_t c = nis_display_inner_tree(dest, len, params, car);
                 dest += c;
                 count += c;
                 if (params->count + 1 <= len) {
@@ -101,7 +101,7 @@ static size_t nun_display_inner_tree(char *dest, size_t len, struct DisplayParam
                 ++params->count;
                 ++count;
             }
-            size_t c = nun_display_inner_tree(dest, len, params, value->vpair.car);
+            size_t c = nis_display_inner_tree(dest, len, params, value->vpair.car);
             dest += c;
             count += c;
             if (params->count + 3 <= len) {
@@ -112,7 +112,7 @@ static size_t nun_display_inner_tree(char *dest, size_t len, struct DisplayParam
                 params->count += 3;
                 count += 3;
             }
-            c = nun_display_inner_tree(dest, len, params, value->vpair.cdr);
+            c = nis_display_inner_tree(dest, len, params, value->vpair.cdr);
             dest += c;
             count += c;
             if (params->count + 1 <= len) {
@@ -124,7 +124,7 @@ static size_t nun_display_inner_tree(char *dest, size_t len, struct DisplayParam
             return count;
         }
     } break;
-    case NUN_STREE_VECTOR: {
+    case NIS_STREE_VECTOR: {
         size_t count = 0;
         if (params->count + 2 <= len) {
             dest[0] = '#';
@@ -134,7 +134,7 @@ static size_t nun_display_inner_tree(char *dest, size_t len, struct DisplayParam
             count += 2;
         }
         for (size_t i = 0; i < value->vvec.len; i++) {
-            size_t c = nun_display_inner_tree(dest, len, params, value->vvec.ptr[i]);
+            size_t c = nis_display_inner_tree(dest, len, params, value->vvec.ptr[i]);
             dest += c;
             count += c;
             if (params->count + 1 <= len) {
@@ -154,7 +154,7 @@ static size_t nun_display_inner_tree(char *dest, size_t len, struct DisplayParam
         }
         return count;
     } break;
-    case NUN_STREE_BYTE_VECTOR: {
+    case NIS_STREE_BYTE_VECTOR: {
         size_t count = 0;
         if (params->count + 4 <= len) {
             dest[0] = '#';
@@ -199,9 +199,9 @@ static size_t nun_display_inner_tree(char *dest, size_t len, struct DisplayParam
         }
         return count;
     } break;
-    case NUN_STREE_ATOM: {
+    case NIS_STREE_ATOM: {
         const char *atom;
-        if (value->flags & NUN_FLAG_INLINE) {
+        if (value->flags & NIS_FLAG_INLINE) {
             atom = value->vinline;
         } else {
             atom = value->vatom;
@@ -217,23 +217,23 @@ static size_t nun_display_inner_tree(char *dest, size_t len, struct DisplayParam
     return 0;
 }
 
-static void nun_display_inner(char *dest, size_t len, struct DisplayParams *params, NunValue *value) {
+static void nis_display_inner(char *dest, size_t len, struct DisplayParams *params, NisValue *value) {
     switch (value->kind) {
-    case NUN_VALUE_FALSE: {
+    case NIS_VALUE_FALSE: {
         if (params->count + 2 <= len) {
             params->count += 2;
             dest[0] = '#';
             dest[1] = 'f';
         }
     } break;
-    case NUN_VALUE_TRUE: {
+    case NIS_VALUE_TRUE: {
         if (params->count + 2 <= len) {
             params->count += 2;
             dest[0] = '#';
             dest[1] = 't';
         }
     } break;
-    case NUN_VALUE_INT: {
+    case NIS_VALUE_INT: {
         int digits;
         if (value->vint) {
             digits = floor(log10(labs(value->vint)) + 1.0);
@@ -256,141 +256,141 @@ static void nun_display_inner(char *dest, size_t len, struct DisplayParams *para
             }
         }
     } break;
-    case NUN_VALUE_FLOAT: {
+    case NIS_VALUE_FLOAT: {
         // TODO
     } break;
-    case NUN_VALUE_TREE: {
-        nun_display_inner_tree(dest, len, params, value->vtree);
+    case NIS_VALUE_TREE: {
+        nis_display_inner_tree(dest, len, params, value->vtree);
     } break;
 #define DISPLAY_SPECIAL(x) if (params->count + strlen(x) <= len) strcpy(dest, x);
-    case NUN_VALUE_LAMBDA: {
+    case NIS_VALUE_LAMBDA: {
         DISPLAY_SPECIAL("lambda")
     } break;
-    case NUN_VALUE_IF: {
+    case NIS_VALUE_IF: {
         DISPLAY_SPECIAL("if")
     } break;
-    case NUN_VALUE_SET: {
+    case NIS_VALUE_SET: {
         DISPLAY_SPECIAL("set!")
     } break;
-    case NUN_VALUE_INCLUDE: {
+    case NIS_VALUE_INCLUDE: {
         DISPLAY_SPECIAL("include")
     } break;
-    case NUN_VALUE_INCLUDE_CI: {
+    case NIS_VALUE_INCLUDE_CI: {
         DISPLAY_SPECIAL("include-ci")
     } break;
-    case NUN_VALUE_COND: {
+    case NIS_VALUE_COND: {
         DISPLAY_SPECIAL("cond")
     } break;
-    case NUN_VALUE_CASE: {
+    case NIS_VALUE_CASE: {
         DISPLAY_SPECIAL("case")
     } break;
-    case NUN_VALUE_ELSE: {
+    case NIS_VALUE_ELSE: {
         DISPLAY_SPECIAL("else")
     } break;
-    case NUN_VALUE_AND: {
+    case NIS_VALUE_AND: {
         DISPLAY_SPECIAL("and")
     } break;
-    case NUN_VALUE_OR: {
+    case NIS_VALUE_OR: {
         DISPLAY_SPECIAL("or")
     } break;
-    case NUN_VALUE_UNLESS: {
+    case NIS_VALUE_UNLESS: {
         DISPLAY_SPECIAL("unless")
     } break;
-    case NUN_VALUE_COND_EXPAND: {
+    case NIS_VALUE_COND_EXPAND: {
         DISPLAY_SPECIAL("cond-expand")
     } break;
-    case NUN_VALUE_LET: {
+    case NIS_VALUE_LET: {
         DISPLAY_SPECIAL("let")
     } break;
-    case NUN_VALUE_LET_STAR: {
+    case NIS_VALUE_LET_STAR: {
         DISPLAY_SPECIAL("let*")
     } break;
-    case NUN_VALUE_LETREC: {
+    case NIS_VALUE_LETREC: {
         DISPLAY_SPECIAL("letrec")
     } break;
-    case NUN_VALUE_LETREC_STAR: {
+    case NIS_VALUE_LETREC_STAR: {
         DISPLAY_SPECIAL("letrec*")
     } break;
-    case NUN_VALUE_LET_VALUES: {
+    case NIS_VALUE_LET_VALUES: {
         DISPLAY_SPECIAL("let-values")
     } break;
-    case NUN_VALUE_LET_VALUES_STAR: {
+    case NIS_VALUE_LET_VALUES_STAR: {
         DISPLAY_SPECIAL("let*-values")
     } break;
-    case NUN_VALUE_BEGIN: {
+    case NIS_VALUE_BEGIN: {
         DISPLAY_SPECIAL("begin")
     } break;
-    case NUN_VALUE_DO: {
+    case NIS_VALUE_DO: {
         DISPLAY_SPECIAL("do")
     } break;
-    case NUN_VALUE_LET_LOOP: {
+    case NIS_VALUE_LET_LOOP: {
         DISPLAY_SPECIAL("let")
     } break;
-    case NUN_VALUE_DELAY: {
+    case NIS_VALUE_DELAY: {
         DISPLAY_SPECIAL("delay")
     } break;
-    case NUN_VALUE_DELAY_FORCE: {
+    case NIS_VALUE_DELAY_FORCE: {
         DISPLAY_SPECIAL("delay-force")
     } break;
-    case NUN_VALUE_FORCE: {
+    case NIS_VALUE_FORCE: {
         DISPLAY_SPECIAL("force")
     } break;
-    case NUN_VALUE_MAKE_PROMISE: {
+    case NIS_VALUE_MAKE_PROMISE: {
         DISPLAY_SPECIAL("make-promise")
     } break;
-    case NUN_VALUE_MAKE_PARAMETER: {
+    case NIS_VALUE_MAKE_PARAMETER: {
         DISPLAY_SPECIAL("make-parameter")
     } break;
-    case NUN_VALUE_PARAMETERIZE: {
+    case NIS_VALUE_PARAMETERIZE: {
         DISPLAY_SPECIAL("parameterize")
     } break;
-    case NUN_VALUE_GUARD: {
+    case NIS_VALUE_GUARD: {
         DISPLAY_SPECIAL("guard")
     } break;
-    case NUN_VALUE_QUOTE: {
+    case NIS_VALUE_QUOTE: {
         DISPLAY_SPECIAL("quote")
     } break;
-    case NUN_VALUE_QUASIQUOTE: {
+    case NIS_VALUE_QUASIQUOTE: {
         DISPLAY_SPECIAL("quasiquote")
     } break;
-    case NUN_VALUE_UNQUOTE: {
+    case NIS_VALUE_UNQUOTE: {
         DISPLAY_SPECIAL("unquote")
     } break;
-    case NUN_VALUE_UNQUOTE_SPLICING: {
+    case NIS_VALUE_UNQUOTE_SPLICING: {
         DISPLAY_SPECIAL("unquote-splicing")
     } break;
-    case NUN_VALUE_CASE_LAMBDA: {
+    case NIS_VALUE_CASE_LAMBDA: {
         DISPLAY_SPECIAL("case-lambda")
     } break;
-    case NUN_VALUE_LET_SYNTAX: {
+    case NIS_VALUE_LET_SYNTAX: {
         DISPLAY_SPECIAL("let-syntax")
     } break;
-    case NUN_VALUE_LETREC_SYNTAX: {
+    case NIS_VALUE_LETREC_SYNTAX: {
         DISPLAY_SPECIAL("letrec-syntax")
     } break;
-    case NUN_VALUE_SYNTAX_RULES: {
+    case NIS_VALUE_SYNTAX_RULES: {
         DISPLAY_SPECIAL("syntax-rules")
     } break;
-    case NUN_VALUE_SYNTAX_ERROR: {
+    case NIS_VALUE_SYNTAX_ERROR: {
         DISPLAY_SPECIAL("syntax-error")
     } break;
     }
 #undef DISPLAY_SPECIAL
 }
 
-size_t nun_display(char *dest, size_t len, NunValue *value) {
+size_t nis_display(char *dest, size_t len, NisValue *value) {
     struct DisplayParams params = {
         .count = 0,
         .indent = 0,
         .indent_char = " ",
         .newline_char = "\n",
     };
-    nun_display_inner(dest, len - 1, &params, value);
+    nis_display_inner(dest, len - 1, &params, value);
     dest[params.count] = 0;
     return params.count;
 }
 
-size_t nun_hlbc_display(char *dest, size_t len, NunHlprog *prog) {
+size_t nis_hlbc_display(char *dest, size_t len, NisHlprog *prog) {
 #define DISPLAY_STR(x) if (count + strlen(x) <= len) {  \
         strcpy(dest + count, x);                        \
         count += strlen(x);                             \
@@ -400,132 +400,132 @@ size_t nun_hlbc_display(char *dest, size_t len, NunHlprog *prog) {
     bool end;
     for (size_t i = 0; i < prog->func; i++) {
         end = false;
-        NunHlfun *fun = prog->funv + i;
+        NisHlfun *fun = prog->funv + i;
         DISPLAY_STR("(define (");
         DISPLAY_STR(fun->name);
         DISPLAY_STR(")");
         for (size_t j = 0; j < fun->insc; j++) {
-            NunHlbc *ins = fun->insv + j;
+            NisHlbc *ins = fun->insv + j;
             DISPLAY_STR("\n  (");
             switch (ins->opcode) {
-            case NUN_HLBC_ALLOCA: {
+            case NIS_HLBC_ALLOCA: {
                 DISPLAY_STR("alloca");
             } break;
-            case NUN_HLBC_LOAD: {
+            case NIS_HLBC_LOAD: {
                 DISPLAY_STR("load");
             } break;
-            case NUN_HLBC_STORE: {
+            case NIS_HLBC_STORE: {
                 DISPLAY_STR("store");
             } break;
-            case NUN_HLBC_LOAD_U8: {
+            case NIS_HLBC_LOAD_U8: {
                 DISPLAY_STR("load-u8");
             } break;
-            case NUN_HLBC_LOAD_U16: {
+            case NIS_HLBC_LOAD_U16: {
                 DISPLAY_STR("load-u16");
             } break;
-            case NUN_HLBC_LOAD_U32: {
+            case NIS_HLBC_LOAD_U32: {
                 DISPLAY_STR("load-u32");
             } break;
-            case NUN_HLBC_LOAD_U64: {
+            case NIS_HLBC_LOAD_U64: {
                 DISPLAY_STR("load-u64");
             } break;
-            case NUN_HLBC_STORE_U8: {
+            case NIS_HLBC_STORE_U8: {
                 DISPLAY_STR("store-u8");
             } break;
-            case NUN_HLBC_STORE_U16: {
+            case NIS_HLBC_STORE_U16: {
                 DISPLAY_STR("store-u16");
             } break;
-            case NUN_HLBC_STORE_U32: {
+            case NIS_HLBC_STORE_U32: {
                 DISPLAY_STR("store-u32");
             } break;
-            case NUN_HLBC_STORE_U64: {
+            case NIS_HLBC_STORE_U64: {
                 DISPLAY_STR("store-u64");
             } break;
-            case NUN_HLBC_CALL: {
+            case NIS_HLBC_CALL: {
                 DISPLAY_STR("call");
             } break;
-            case NUN_HLBC_RETURN: {
+            case NIS_HLBC_RETURN: {
                 DISPLAY_STR("return");
             } break;
-            case NUN_HLBC_BR: {
+            case NIS_HLBC_BR: {
                 DISPLAY_STR("br");
             } break;
-            case NUN_HLBC_COND_BR: {
+            case NIS_HLBC_COND_BR: {
                 DISPLAY_STR("br");
             } break;
-            case NUN_HLBC_PHI: {
+            case NIS_HLBC_PHI: {
                 DISPLAY_STR("phi");
             } break;
-            case NUN_HLBC_CMP: {
+            case NIS_HLBC_CMP: {
                 DISPLAY_STR("cmp");
             } break;
-            case NUN_HLBC_FCMP: {
+            case NIS_HLBC_FCMP: {
                 DISPLAY_STR("fcmp");
             } break;
-            case NUN_HLBC_ADD: {
+            case NIS_HLBC_ADD: {
                 DISPLAY_STR("add");
             } break;
-            case NUN_HLBC_SUB: {
+            case NIS_HLBC_SUB: {
                 DISPLAY_STR("sub");
             } break;
-            case NUN_HLBC_MUL: {
+            case NIS_HLBC_MUL: {
                 DISPLAY_STR("mul");
             } break;
-            case NUN_HLBC_IMUL: {
+            case NIS_HLBC_IMUL: {
                 DISPLAY_STR("imul");
             } break;
-            case NUN_HLBC_DIV: {
+            case NIS_HLBC_DIV: {
                 DISPLAY_STR("div");
             } break;
-            case NUN_HLBC_IDIV: {
+            case NIS_HLBC_IDIV: {
                 DISPLAY_STR("idiv");
             } break;
-            case NUN_HLBC_REM: {
+            case NIS_HLBC_REM: {
                 DISPLAY_STR("rem");
             } break;
-            case NUN_HLBC_IREM: {
+            case NIS_HLBC_IREM: {
                 DISPLAY_STR("irem");
             } break;
-            case NUN_HLBC_XOR: {
+            case NIS_HLBC_XOR: {
                 DISPLAY_STR("xor");
             } break;
-            case NUN_HLBC_OR: {
+            case NIS_HLBC_OR: {
                 DISPLAY_STR("or");
             } break;
-            case NUN_HLBC_AND: {
+            case NIS_HLBC_AND: {
                 DISPLAY_STR("and");
             } break;
-            case NUN_HLBC_SHLL: {
+            case NIS_HLBC_SHLL: {
                 DISPLAY_STR("shll");
             } break;
-            case NUN_HLBC_SHRL: {
+            case NIS_HLBC_SHRL: {
                 DISPLAY_STR("shrl");
             } break;
-            case NUN_HLBC_SHRA: {
+            case NIS_HLBC_SHRA: {
                 DISPLAY_STR("shra");
             } break;
-            case NUN_HLBC_FADD: {
+            case NIS_HLBC_FADD: {
                 DISPLAY_STR("fadd");
             } break;
-            case NUN_HLBC_FSUB: {
+            case NIS_HLBC_FSUB: {
                 DISPLAY_STR("fsub");
             } break;
-            case NUN_HLBC_FMUL: {
+            case NIS_HLBC_FMUL: {
                 DISPLAY_STR("fmul");
             } break;
-            case NUN_HLBC_FDIV: {
+            case NIS_HLBC_FDIV: {
                 DISPLAY_STR("fdiv");
             } break;
-            case NUN_HLBC_FREM: {
+            case NIS_HLBC_FREM: {
                 DISPLAY_STR("frem");
             } break;
-            case NUN_HLBC_CAR: {
+            case NIS_HLBC_CAR: {
                 DISPLAY_STR("car");
             } break;
-            case NUN_HLBC_CDR: {
+            case NIS_HLBC_CDR: {
                 DISPLAY_STR("cdr");
             } break;
-            case NUN_HLBC_CONS: {
+            case NIS_HLBC_CONS: {
                 DISPLAY_STR("cons");
             } break;
             }
@@ -540,36 +540,36 @@ size_t nun_hlbc_display(char *dest, size_t len, NunHlprog *prog) {
             if (ins->target >= 0) {
                 DISPLAY_STR(" @");
                 params.count = count;
-                NunValue pseudo;
-                pseudo.kind = NUN_VALUE_INT;
+                NisValue pseudo;
+                pseudo.kind = NIS_VALUE_INT;
                 pseudo.vint = ins->target;
-                nun_display_inner(dest + count, len, &params, &pseudo);
+                nis_display_inner(dest + count, len, &params, &pseudo);
                 count = params.count;
             }
             
             for (size_t k = 0; k < ins->argc; k++) {
                 DISPLAY_STR(" ");
-                NunHlarg *arg = ins->argv + k;
+                NisHlarg *arg = ins->argv + k;
                 switch (arg->kind) {
-                case NUN_HLBC_ARG_VALUE: {
+                case NIS_HLBC_ARG_VALUE: {
                     params.count = count;
-                    nun_display_inner(dest + count, len, &params, &arg->value);
+                    nis_display_inner(dest + count, len, &params, &arg->value);
                 } break;
-                case NUN_HLBC_ARG_REGISTER: {
+                case NIS_HLBC_ARG_REGISTER: {
                     DISPLAY_STR("%");
                     params.count = count;
-                    NunValue pseudo;
-                    pseudo.kind = NUN_VALUE_INT;
+                    NisValue pseudo;
+                    pseudo.kind = NIS_VALUE_INT;
                     pseudo.vint = arg->ssreg;
-                    nun_display_inner(dest + count, len, &params, &pseudo);
+                    nis_display_inner(dest + count, len, &params, &pseudo);
                 } break;
-                case NUN_HLBC_ARG_PROPER: {
+                case NIS_HLBC_ARG_PROPER: {
                     DISPLAY_STR("%");
                     params.count = count;
-                    NunValue pseudo;
-                    pseudo.kind = NUN_VALUE_INT;
+                    NisValue pseudo;
+                    pseudo.kind = NIS_VALUE_INT;
                     pseudo.vint = -1 - arg->ssarg;
-                    nun_display_inner(dest + count, len, &params, &pseudo);
+                    nis_display_inner(dest + count, len, &params, &pseudo);
                 } break;
                 }
                 count = params.count;

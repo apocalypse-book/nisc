@@ -3,18 +3,18 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/stat.h>
-#include "include/nunsc.h"
+#include "include/nisc.h"
 
 int main(int argc, const char **argv) {
     if (argc != 2) {
-        fprintf(stderr, "nunsc:%s:%d: error: no input file\n", __FILE__, __LINE__);
+        fprintf(stderr, "nisc:%s:%d: error: no input file\n", __FILE__, __LINE__);
         exit(1);
     }
 
     struct stat statbuf;
     int status = stat(argv[1], &statbuf);
     if (status < 0) {
-        fprintf(stderr, "nunsc:%s:%d: error: %s\n", __FILE__, __LINE__, strerror(errno));
+        fprintf(stderr, "nisc:%s:%d: error: %s\n", __FILE__, __LINE__, strerror(errno));
         exit(errno);
     }
 
@@ -27,46 +27,46 @@ int main(int argc, const char **argv) {
         if (len != (size_t) statbuf.st_size) {
             int err = errno;
             fclose(fsrc);
-            fprintf(stderr, "nunsc:%s:%d: error: %s\n", __FILE__, __LINE__, strerror(err));
+            fprintf(stderr, "nisc:%s:%d: error: %s\n", __FILE__, __LINE__, strerror(err));
             exit(errno);
         }
         fclose(fsrc);
         source = src;
     }
     
-    struct NunTokens tokens;
+    struct NisTokens tokens;
 
-    if ((status = nun_lex(&tokens, source, len))) {
+    if ((status = nis_lex(&tokens, source, len))) {
         exit(status);
     }
 
-    NunGc gc;
-    nun_new_gc(&gc, 1024 * 1024);
+    NisGc gc;
+    nis_new_gc(&gc, 1024 * 1024);
 
-    NunValue *program = NULL;
+    NisValue *program = NULL;
     size_t proglen;
-    if ((status = nun_parse(&program, &proglen, &gc, &tokens))) {
+    if ((status = nis_parse(&program, &proglen, &gc, &tokens))) {
         free(program);
-        nun_del_tokens(&tokens);
+        nis_del_tokens(&tokens);
         free((void *) source);
         exit(status);
     }
-    nun_del_tokens(&tokens);
+    nis_del_tokens(&tokens);
 
     for (size_t i = 0; i < proglen; i++) {
         const int cap = 1024;
         char buffer[cap];
-        nun_display(buffer, cap, program + i);
+        nis_display(buffer, cap, program + i);
         fprintf(stdout, "%.*s\n", cap, buffer);
     }
 
-    NunHlbuilder b;
-    nun_new_hlbuilder(&b, &gc);
-    nun_hlb_make_prelude(&b);
+    NisHlbuilder b;
+    nis_new_hlbuilder(&b, &gc);
+    nis_hlb_make_prelude(&b);
 
-    NunHlprog prog;
-    if ((status = nun_to_hlbc(&prog, &b, program, proglen))) {
-        nun_del_gc(&gc);
+    NisHlprog prog;
+    if ((status = nis_to_hlbc(&prog, &b, program, proglen))) {
+        nis_del_gc(&gc);
         free(program);
         free((void *) source);
         exit(1);
@@ -74,12 +74,12 @@ int main(int argc, const char **argv) {
 
     const int cap = 4096;
     char buffer[cap];
-    nun_hlbc_display(buffer, cap, &prog);
+    nis_hlbc_display(buffer, cap, &prog);
     fprintf(stdout, "%.*s", cap, buffer);
     
     free(program);
 
-    nun_del_gc(&gc);
+    nis_del_gc(&gc);
     free((void *) source);
 
     return 0;

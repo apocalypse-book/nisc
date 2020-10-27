@@ -1,63 +1,63 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "include/nunsc.h"
+#include "include/nisc.h"
 
-void nun_new_gc(NunGc *dest, size_t capacity) {
+void nis_new_gc(NisGc *dest, size_t capacity) {
     dest->buffer = malloc(capacity);
-    dest->len = sizeof(struct NunAllocFrame);
+    dest->len = sizeof(struct NisAllocFrame);
     dest->capacity = capacity;
     dest->prev = dest->buffer;
     dest->prev->next = NULL;
     dest->prev->len = capacity;
 
-    dest->nil = nun_alloc(dest, sizeof(NunStree));
-    dest->nil->kind = NUN_STREE_NIL;
+    dest->nil = nis_alloc(dest, sizeof(NisStree));
+    dest->nil->kind = NIS_STREE_NIL;
     dest->nil->flags = 0;
     dest->nil->next = NULL;
     
-    dest->t = nun_alloc(dest, sizeof(NunStree));
-    dest->t->kind = NUN_STREE_TRUE;
+    dest->t = nis_alloc(dest, sizeof(NisStree));
+    dest->t->kind = NIS_STREE_TRUE;
     dest->t->flags = 0;
     dest->t->next = NULL;
     
-    dest->f = nun_alloc(dest, sizeof(NunStree));
-    dest->f->kind = NUN_STREE_FALSE;
+    dest->f = nis_alloc(dest, sizeof(NisStree));
+    dest->f->kind = NIS_STREE_FALSE;
     dest->f->flags = 0;
     dest->f->next = NULL;
 
     dest->last = NULL;
     dest->allocated = 0;
-    dest->threshold = capacity / sizeof(NunStree) >> 3;
+    dest->threshold = capacity / sizeof(NisStree) >> 3;
 }
 
-void nun_del_gc(NunGc *dest) {
+void nis_del_gc(NisGc *dest) {
     free(dest->buffer);
 }
 
-void *nun_alloc(NunGc *gc, size_t size) {
+void *nis_alloc(NisGc *gc, size_t size) {
     if (size == 0) {
         return NULL;
     }
     
-    size = nun_align_up(size, 8);
+    size = nis_align_up(size, 8);
     if (gc->len + size >= gc->capacity) {
-        fprintf(stderr, "nunsc:%s:%d: error: out of memory\n", __FILE__, __LINE__);
+        fprintf(stderr, "nisc:%s:%d: error: out of memory\n", __FILE__, __LINE__);
         exit(1);
     }
 
-    struct NunAllocFrame **prev = &gc->prev;
-    struct NunAllocFrame *frame = gc->prev;
+    struct NisAllocFrame **prev = &gc->prev;
+    struct NisAllocFrame *frame = gc->prev;
     while (frame) {
         if (frame->len >= size) {
-            if (frame->len - size < sizeof(struct NunAllocFrame)) {
+            if (frame->len - size < sizeof(struct NisAllocFrame)) {
                 void *ptr = frame;
                 *prev = frame->next;
                 return ptr;
             } else {
                 void *ptr = frame;
-                struct NunAllocFrame *nextptr = (void *) ((char *) ptr + size);
-                struct NunAllocFrame *nextnext = frame->next;
+                struct NisAllocFrame *nextptr = (void *) ((char *) ptr + size);
+                struct NisAllocFrame *nextnext = frame->next;
                 size_t nextlen = frame->len - size;
                 *prev = nextptr;
                 frame = nextptr;
@@ -70,18 +70,18 @@ void *nun_alloc(NunGc *gc, size_t size) {
         frame = frame->next;
     }
     
-    fprintf(stderr, "nunsc:%s:%d: error: out of memory\n", __FILE__, __LINE__);
+    fprintf(stderr, "nisc:%s:%d: error: out of memory\n", __FILE__, __LINE__);
     exit(1);
 }
 
-void nun_dealloc(NunGc *gc, void *ptr, size_t size) {
-    size = nun_align_up(size, 8);
+void nis_dealloc(NisGc *gc, void *ptr, size_t size) {
+    size = nis_align_up(size, 8);
     
-    struct NunAllocFrame **prev = &gc->prev;
-    struct NunAllocFrame *frame = gc->prev;
+    struct NisAllocFrame **prev = &gc->prev;
+    struct NisAllocFrame *frame = gc->prev;
     while (frame) {
         if (frame == ptr) {
-            fprintf(stderr, "nunsc:%s:%d: error: double free\n", __FILE__, __LINE__);
+            fprintf(stderr, "nisc:%s:%d: error: double free\n", __FILE__, __LINE__);
             exit(1);
         } else if ((size_t) frame > (size_t) ptr) {
             frame = *prev;
@@ -98,20 +98,20 @@ void nun_dealloc(NunGc *gc, void *ptr, size_t size) {
         frame = frame->next;
     }
     
-    fprintf(stderr, "nunsc:%s:%d: error: invalid free\n", __FILE__, __LINE__);
+    fprintf(stderr, "nisc:%s:%d: error: invalid free\n", __FILE__, __LINE__);
     exit(1);
 }
 
-void *nun_realloc(NunGc *gc, void *ptr, size_t oldsize, size_t newsize) {
-    oldsize = nun_align_up(oldsize, 8);
-    newsize = nun_align_up(newsize, 8);
+void *nis_realloc(NisGc *gc, void *ptr, size_t oldsize, size_t newsize) {
+    oldsize = nis_align_up(oldsize, 8);
+    newsize = nis_align_up(newsize, 8);
 
     if (newsize == oldsize) {
         return ptr;
     } else if (newsize > oldsize) {
-        struct NunAllocFrame *frame = gc->prev;
+        struct NisAllocFrame *frame = gc->prev;
         while (frame) {
-            struct NunAllocFrame *next = frame->next;
+            struct NisAllocFrame *next = frame->next;
             if ((char *) ptr + oldsize == (char *) next) {
                 if (oldsize + next->len >= newsize) {
                     if (oldsize + next->len == newsize) {
@@ -125,9 +125,9 @@ void *nun_realloc(NunGc *gc, void *ptr, size_t oldsize, size_t newsize) {
                     return ptr;
                 } else {
                     void *oldptr = ptr;
-                    void *newptr = nun_alloc(gc, newsize);
+                    void *newptr = nis_alloc(gc, newsize);
                     memcpy(newptr, oldptr, oldsize);
-                    nun_dealloc(gc, oldptr, oldsize);
+                    nis_dealloc(gc, oldptr, oldsize);
                     return newptr;
                 }
             }
@@ -135,59 +135,59 @@ void *nun_realloc(NunGc *gc, void *ptr, size_t oldsize, size_t newsize) {
         }
     }
     
-    fprintf(stderr, "nunsc:%s:%d: error: invalid free\n", __FILE__, __LINE__);
+    fprintf(stderr, "nisc:%s:%d: error: invalid free\n", __FILE__, __LINE__);
     exit(1);
 }
 
-void nun_false(NunValue *dest, NunGc *gc) {
+void nis_false(NisValue *dest, NisGc *gc) {
     (void) gc;
-    dest->kind = NUN_VALUE_FALSE;
+    dest->kind = NIS_VALUE_FALSE;
 }
 
-void nun_true(NunValue *dest, NunGc *gc) {
+void nis_true(NisValue *dest, NisGc *gc) {
     (void) gc;
-    dest->kind = NUN_VALUE_TRUE;
+    dest->kind = NIS_VALUE_TRUE;
 }
 
-void nun_int(NunValue *dest, NunGc *gc, long value) {
+void nis_int(NisValue *dest, NisGc *gc, long value) {
     (void) gc;
-    dest->kind = NUN_VALUE_INT;
+    dest->kind = NIS_VALUE_INT;
     dest->vint = value;
 }
 
-void nun_float(NunValue *dest, NunGc *gc, double value) {
+void nis_float(NisValue *dest, NisGc *gc, double value) {
     (void) gc;
-    dest->kind = NUN_VALUE_FLOAT;
+    dest->kind = NIS_VALUE_FLOAT;
     dest->vfloat = value;
 }
 
-void nun_stree(NunValue *dest, NunGc *gc, NunStree *value) {
+void nis_stree(NisValue *dest, NisGc *gc, NisStree *value) {
     (void) gc;
-    dest->kind = NUN_VALUE_TREE;
+    dest->kind = NIS_VALUE_TREE;
     dest->vtree = value;
 }
 
-void nun_nil(NunValue *dest, NunGc *gc) {
-    dest->kind = NUN_VALUE_TREE;
+void nis_nil(NisValue *dest, NisGc *gc) {
+    dest->kind = NIS_VALUE_TREE;
     dest->vtree = gc->nil;
 }
 
-void nun_pair(NunValue *dest, NunGc *gc, NunValue *car, NunValue *cdr) {
-    dest->kind = NUN_VALUE_TREE;
-    NunStree *tree = nun_alloc(gc, sizeof(NunStree));
-    tree->kind = NUN_STREE_PAIR;
+void nis_pair(NisValue *dest, NisGc *gc, NisValue *car, NisValue *cdr) {
+    dest->kind = NIS_VALUE_TREE;
+    NisStree *tree = nis_alloc(gc, sizeof(NisStree));
+    tree->kind = NIS_STREE_PAIR;
     tree->flags = 0;
     tree->next = gc->last;
-    tree->vpair.car = nun_value_to_stree(gc, car);
-    tree->vpair.cdr = nun_value_to_stree(gc, cdr);
+    tree->vpair.car = nis_value_to_stree(gc, car);
+    tree->vpair.cdr = nis_value_to_stree(gc, cdr);
     dest->vtree = tree;
     gc->last = tree;
 }
 
-void nun_vector(NunValue *dest, NunGc *gc) {
-    dest->kind = NUN_VALUE_TREE;
-    NunStree *tree = nun_alloc(gc, sizeof(NunStree));
-    tree->kind = NUN_STREE_PAIR;
+void nis_vector(NisValue *dest, NisGc *gc) {
+    dest->kind = NIS_VALUE_TREE;
+    NisStree *tree = nis_alloc(gc, sizeof(NisStree));
+    tree->kind = NIS_STREE_PAIR;
     tree->flags = 0;
     tree->next = gc->last;
     tree->vvec.ptr = NULL;
@@ -197,10 +197,10 @@ void nun_vector(NunValue *dest, NunGc *gc) {
     gc->last = tree;
 }
 
-void nun_byte_vector(NunValue *dest, NunGc *gc) {
-    dest->kind = NUN_VALUE_TREE;
-    NunStree *tree = nun_alloc(gc, sizeof(NunStree));
-    tree->kind = NUN_STREE_PAIR;
+void nis_byte_vector(NisValue *dest, NisGc *gc) {
+    dest->kind = NIS_VALUE_TREE;
+    NisStree *tree = nis_alloc(gc, sizeof(NisStree));
+    tree->kind = NIS_STREE_PAIR;
     tree->flags = 0;
     tree->next = gc->last;
     tree->vbvec.ptr = NULL;
@@ -210,60 +210,60 @@ void nun_byte_vector(NunValue *dest, NunGc *gc) {
     gc->last = tree;
 }
 
-void nun_atom(NunValue *dest, NunGc *gc, const char *value) {
+void nis_atom(NisValue *dest, NisGc *gc, const char *value) {
     size_t len = strlen(value);
     
-    dest->kind = NUN_VALUE_TREE;
-    NunStree *tree = nun_alloc(gc, sizeof(NunStree));
+    dest->kind = NIS_VALUE_TREE;
+    NisStree *tree = nis_alloc(gc, sizeof(NisStree));
     if (len < 24) {
-        tree->kind = NUN_STREE_ATOM;
-        tree->flags = NUN_FLAG_INLINE;
+        tree->kind = NIS_STREE_ATOM;
+        tree->flags = NIS_FLAG_INLINE;
         tree->next = gc->last;
         strcpy((char *) tree->vinline, value);
     } else {
-        tree->kind = NUN_STREE_ATOM;
-        tree->flags = NUN_FLAG_INLINE;
+        tree->kind = NIS_STREE_ATOM;
+        tree->flags = NIS_FLAG_INLINE;
         tree->next = gc->last;
-        tree->vatom = nun_alloc(gc, len + 1);
+        tree->vatom = nis_alloc(gc, len + 1);
         strcpy((char *) tree->vatom, value);
     }
     dest->vtree = tree;
     gc->last = tree;
 }
 
-void nun_special(NunValue *dest, NunGc *gc, int value) {
+void nis_special(NisValue *dest, NisGc *gc, int value) {
     (void) gc;
     dest->kind = value;
 }
 
-NunStree *nun_value_to_stree(NunGc *gc, NunValue *value) {
+NisStree *nis_value_to_stree(NisGc *gc, NisValue *value) {
     switch (value->kind) {
-    case NUN_VALUE_TRUE:
+    case NIS_VALUE_TRUE:
         return gc->t;
-    case NUN_VALUE_FALSE:
+    case NIS_VALUE_FALSE:
         return gc->f;
-    case NUN_VALUE_INT: {
-        NunStree *tree = nun_alloc(gc, sizeof(NunStree));
-        tree->kind = NUN_STREE_INT;
+    case NIS_VALUE_INT: {
+        NisStree *tree = nis_alloc(gc, sizeof(NisStree));
+        tree->kind = NIS_STREE_INT;
         tree->flags = 0;
         tree->next = gc->last;
         tree->vint = value->vint;
         gc->last = tree;
         return tree;
     }
-    case NUN_VALUE_FLOAT: {
-        NunStree *tree = nun_alloc(gc, sizeof(NunStree));
-        tree->kind = NUN_STREE_FLOAT;
+    case NIS_VALUE_FLOAT: {
+        NisStree *tree = nis_alloc(gc, sizeof(NisStree));
+        tree->kind = NIS_STREE_FLOAT;
         tree->flags = 0;
         tree->next = gc->last;
         tree->vfloat = value->vfloat;
         gc->last = tree;
         return tree;
     }
-    case NUN_VALUE_TREE:
+    case NIS_VALUE_TREE:
         return value->vtree;
     default:
-        fprintf(stderr, "nunsc:%s:%d: error: undefined value\n", __FILE__, __LINE__);
+        fprintf(stderr, "nisc:%s:%d: error: undefined value\n", __FILE__, __LINE__);
         exit(-1);
     }
 }
