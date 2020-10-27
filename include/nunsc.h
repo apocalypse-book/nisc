@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include "riscv.h"
 
 #define NUN_FLAG_MARK 0x1
 #define NUN_FLAG_INLINE 0x2
@@ -18,6 +19,11 @@ typedef struct NunPair NunPair;
 typedef struct NunVector NunVector;
 typedef struct NunByteVector NunByteVector;
 typedef struct NunGc NunGc;
+typedef struct NunHlbc NunHlbc;
+typedef struct NunHlarg NunHlarg;
+typedef struct NunHlfun NunHlfun;
+typedef struct NunHlbuilder NunHlbuilder;
+typedef struct NunHlprog NunHlprog;
 
 enum {
     NUN_TOKEN_NONE = 0,
@@ -68,6 +74,7 @@ struct NunToken {
 };
 
 struct NunTokens {
+    // owned
     NunToken *list;
     size_t len;
 };
@@ -85,17 +92,21 @@ enum {
 };
 
 struct NunPair {
+    // gc'ed
     NunStree *car;
+    // gc'ed
     NunStree *cdr;
 };
 
 struct NunVector {
+    // gc-owned
     NunStree **ptr;
     size_t len;
     size_t cap;
 };
 
 struct NunByteVector {
+    // gc-owned
     unsigned char *ptr;
     size_t len;
     size_t cap;
@@ -112,6 +123,7 @@ struct NunStree {
         NunPair vpair;
         NunVector vvec;
         NunByteVector vbvec;
+        // gc-owned
         const char *vatom;
         const char vinline[24];
     };
@@ -169,28 +181,139 @@ struct NunValue {
     union {
         long vint;
         double vfloat;
+        // gc'ed
         NunStree *vtree;
     };
 };
 
 struct NunAllocFrame {
+    // borrowed
     struct NunAllocFrame *next;
     size_t len;
 };
 
 struct NunGc {
+    // borrowed
     struct NunAllocFrame *prev;
+    // owned
     void *buffer;
     size_t len;
     size_t capacity;
 
+    // gc'ed
     NunStree *nil;
     NunStree *t;
     NunStree *f;
     
+    // borrowed
     NunStree *last;
     size_t allocated;
     size_t threshold;
+};
+
+enum {
+    NUN_HLBC_ARG_VALUE,
+    NUN_HLBC_ARG_REGISTER,
+    NUN_HLBC_ARG_PROPER,
+};
+
+struct NunHlarg {
+    int kind;
+    int flags;
+    union {
+        NunValue value;
+        int32_t ssreg;
+        int32_t ssarg;
+    };
+};
+
+enum {
+    // memory
+    NUN_HLBC_ALLOCA,
+    NUN_HLBC_LOAD,
+    NUN_HLBC_STORE,
+    NUN_HLBC_LOAD_U8,
+    NUN_HLBC_LOAD_U16,
+    NUN_HLBC_LOAD_U32,
+    NUN_HLBC_LOAD_U64,
+    NUN_HLBC_STORE_U8,
+    NUN_HLBC_STORE_U16,
+    NUN_HLBC_STORE_U32,
+    NUN_HLBC_STORE_U64,
+    // control flow
+    NUN_HLBC_CALL,
+    NUN_HLBC_RETURN,
+    NUN_HLBC_BR,
+    NUN_HLBC_COND_BR,
+    NUN_HLBC_PHI,
+    // comparison
+    NUN_HLBC_CMP,
+    NUN_HLBC_FCMP,
+    // integer arithmetic
+    NUN_HLBC_ADD,
+    NUN_HLBC_SUB,
+    NUN_HLBC_MUL,
+    NUN_HLBC_IMUL,
+    NUN_HLBC_DIV,
+    NUN_HLBC_IDIV,
+    NUN_HLBC_REM,
+    NUN_HLBC_IREM,
+    // bitwise arithmetic
+    NUN_HLBC_XOR,
+    NUN_HLBC_OR,
+    NUN_HLBC_AND,
+    NUN_HLBC_SHLL,
+    NUN_HLBC_SHRL,
+    NUN_HLBC_SHRA,
+    // floating point arithmetic
+    NUN_HLBC_FADD,
+    NUN_HLBC_FSUB,
+    NUN_HLBC_FMUL,
+    NUN_HLBC_FDIV,
+    NUN_HLBC_FREM,
+    // lisp specific
+    NUN_HLBC_CAR,
+    NUN_HLBC_CDR,
+    NUN_HLBC_CONS,
+};
+
+struct NunHlbc {
+    int opcode;
+    int flags;
+    int32_t target;
+    size_t argc;
+    // owned
+    NunHlarg *argv;
+};
+
+struct NunHlfun {
+    bool present;
+    const char *name;
+    size_t inss;
+    size_t insc;
+    // owned
+    NunHlbc *insv;
+};
+
+struct NunHlbuilder {
+    NunGc *gc;
+    int32_t regcnt;
+    int32_t funref;
+    int32_t insref;
+    size_t funs;
+    size_t func;
+    // owned
+    NunHlfun *funv;
+    int32_t funent;
+};
+
+struct NunHlprog {
+    int32_t funref;
+    int32_t insref;
+    size_t func;
+    // owned
+    NunHlfun *funv;
+    int32_t funent;
 };
 
 extern const char *TOKEN_STRINGS[];
@@ -233,10 +356,15 @@ size_t nun_display(char *dest, size_t len, NunValue *value);
 
 bool nun_tree_list_eh(NunStree *tree);
 bool nun_value_list_eh(NunValue *value);
-
 #define nun_list_eh(x) _Generic((x),                                    \
                                 NunStree *: nun_tree_list_eh,           \
                                 NunValue *: nun_value_list_eh)(x)
+
+size_t nun_tree_list_length(NunStree *tree);
+size_t nun_value_list_length(NunValue *value);
+#define nun_list_length(x) _Generic((x),                                \
+                                    NunStree *: nun_tree_list_length,   \
+                                    NunValue *: nun_value_list_length)(x)
 
 static inline bool nun_tree_true_eh(NunStree *tree) {
     return tree->kind != NUN_STREE_FALSE;
@@ -245,9 +373,32 @@ static inline bool nun_tree_true_eh(NunStree *tree) {
 static inline bool nun_value_true_eh(NunValue *value) {
     return value->kind != NUN_VALUE_FALSE;
 }
-
 #define nun_true_eh(x) _Generic((x),                                    \
                                NunStree *: nun_tree_list_eh,            \
                                NunValue *: nun_value_list_eh)(x)
+
+void nun_new_hlbuilder(NunHlbuilder *dest, NunGc *gc);
+void nun_build_hlbuilder(NunHlprog *dest, NunHlbuilder *b);
+void nun_hlb_entry(NunHlbuilder *b, int32_t funref);
+int32_t nun_hlb_addfun(NunHlbuilder *b, const char *name);
+void nun_hlb_rmfun(NunHlbuilder *b, int32_t funref);
+void nun_hlb_del_ins(NunHlbc *ins);
+
+void nun_hlb_build_call(NunHlarg *dest, NunHlbuilder *b, /* moved */ NunHlarg *argv, size_t argc);
+void nun_hlb_build_add(NunHlarg *dest, NunHlbuilder *b, NunHlarg *lhs, NunHlarg *rhs);
+void nun_hlb_build_sub(NunHlarg *dest, NunHlbuilder *b, NunHlarg *lhs, NunHlarg *rhs);
+void nun_hlb_build_mul(NunHlarg *dest, NunHlbuilder *b, NunHlarg *lhs, NunHlarg *rhs);
+void nun_hlb_build_imul(NunHlarg *dest, NunHlbuilder *b, NunHlarg *lhs, NunHlarg *rhs);
+void nun_hlb_build_div(NunHlarg *dest, NunHlbuilder *b, NunHlarg *lhs, NunHlarg *rhs);
+void nun_hlb_build_idiv(NunHlarg *dest, NunHlbuilder *b, NunHlarg *lhs, NunHlarg *rhs);
+void nun_hlb_build_rem(NunHlarg *dest, NunHlbuilder *b, NunHlarg *lhs, NunHlarg *rhs);
+void nun_hlb_build_irem(NunHlarg *dest, NunHlbuilder *b, NunHlarg *lhs, NunHlarg *rhs);
+void nun_hlb_build_return(NunHlbuilder *b, NunHlarg *retval);
+
+void nun_hlb_prelude_add(NunHlbuilder *b);
+void nun_hlb_make_prelude(NunHlbuilder *b);
+
+int nun_to_hlbc(NunHlprog *dest, NunHlbuilder *b, NunValue *program, size_t proglen);
+size_t nun_hlbc_display(char *dest, size_t len, NunHlprog *prog);
 
 #endif /* NUNSC_H */
