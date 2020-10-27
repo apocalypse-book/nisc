@@ -10,8 +10,10 @@ SRCDIR:=.
 INCDIR:=include
 BIN:=$(BINDIR)/nunsc
 
-SRC:=$(SRCDIR)/main.c
-OBJ:=$(OBJDIR)/main.o
+SRC:=$(SRCDIR)/main.c $(SRCDIR)/display.c $(SRCDIR)/parse.c $(SRCDIR)/gc.c \
+	 $(SRCDIR)/hlbc.c $(SRCDIR)/lisp.c
+OBJ:=$(OBJDIR)/main.o $(OBJDIR)/display.o $(OBJDIR)/parse.o $(OBJDIR)/gc.o \
+	 $(OBJDIR)/hlbc.o $(OBJDIR)/lisp.o
 INC:=$(INCDIR)/nunsc.h $(INCDIR)/nunsc_priv.h
 
 CFLAGS:=-g -Wall -Wextra -pedantic -std=c11
