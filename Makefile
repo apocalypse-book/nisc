@@ -4,7 +4,7 @@ AS:=$(TARGET)-as
 AR:=$(TARGET)-ar
 LD:=$(TARGET)-ld
 
-BINDIR:=bin
+BINDIR:=bin/$(TARGET)
 OBJDIR:=$(BINDIR)/obj
 SRCDIR:=.
 INCDIR:=include
